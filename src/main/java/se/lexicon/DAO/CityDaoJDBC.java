@@ -103,21 +103,97 @@ public class CityDaoJDBC implements CityDao {
 
     @Override
     public List<City> findAll() {
-        return null;
+        try ( Connection connection = MySQLConnection.getConnection();
+              Statement statement = connection.createStatement()
+        ){
+            List<City> cityList = new ArrayList<>();
+            try(
+                    ResultSet resultSet = statement.executeQuery("select * from city");
+            ) {
+
+                while (resultSet.next()) {
+                    int cityId = resultSet.getInt("ID");
+                    String cityName = resultSet.getString("name");
+                    String countryCode = resultSet.getString("CountryCode");
+                    String district = resultSet.getString("District");
+                    int population = resultSet.getInt("Population");
+
+                    cityList.add(new City(cityId, cityName, countryCode, district, population));
+                }
+                connection.close();
+                statement.close();
+            }
+            return cityList;
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     @Override
     public City add(City city) {
-        return null;
+        try ( Connection connection = MySQLConnection.getConnection();
+              PreparedStatement preparedStatement = connection.prepareStatement("insert into city (name, CountryCode, District, Population) values (?, ?, ?, ?)", PreparedStatement.RETURN_GENERATED_KEYS)
+        ) {
+            preparedStatement.setString(1, city.getName());
+            preparedStatement.setString(2, city.getCountryCode());
+            preparedStatement.setString(3, city.getDistrict());
+            preparedStatement.setInt(4, city.getPopulation());
+
+            int result = preparedStatement.executeUpdate();
+            if (result == 1) {
+                try (
+                        ResultSet resultSet = preparedStatement.getGeneratedKeys();
+                ) {
+                    if (resultSet.next()) {
+                        int cityId = resultSet.getInt(1);
+                        city.setId(cityId);
+                    }
+                }
+            }
+            return city;
+
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public City update(City city) {
-        return null;
+        try ( Connection connection = MySQLConnection.getConnection();
+              PreparedStatement preparedStatement = connection.prepareStatement("update city set name = ?, CountryCode = ?, District = ?, Population = ? where id = ?")
+        ) {
+            preparedStatement.setString(1, city.getName());
+            preparedStatement.setString(2, city.getCountryCode());
+            preparedStatement.setString(3, city.getDistrict());
+            preparedStatement.setInt(4, city.getPopulation());
+            preparedStatement.setInt(5, city.getId());
+
+            int result = preparedStatement.executeUpdate();
+            if (result == 1) {
+                return city;
+            }
+            return null;
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public int delete(City city) {
-        return 0;
+        try ( Connection connection = MySQLConnection.getConnection();
+              PreparedStatement preparedStatement = connection.prepareStatement("delete from city where id = ?")
+        ) {
+            preparedStatement.setInt(1, city.getId());
+            int result = preparedStatement.executeUpdate();
+            return result;
+        }
+
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
